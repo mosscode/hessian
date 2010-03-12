@@ -1222,6 +1222,12 @@ public class HessianDebugState implements Hessian2Constants
 	  _length = (ch & 0xff) - 0x20;
 	  return this;
 	}
+	else if (ch == 0x34 || ch == 0x35 || ch == 0x36 || ch == 0x37) {
+	  _isLastChunk = true;
+	  _lengthIndex = 1;
+	  _length = (ch - 0x34) * 256;
+	  return this;
+	}
 	else {
 	  println(String.valueOf((char) ch) + ": unexpected character");
 	  return _next;
