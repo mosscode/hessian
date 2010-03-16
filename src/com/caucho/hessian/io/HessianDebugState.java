@@ -49,7 +49,6 @@
 package com.caucho.hessian.io;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 
@@ -1179,77 +1178,71 @@ public class HessianDebugState implements Hessian2Constants
     
     State next(int ch)
     {
-      if (_lengthIndex < 2) {
-	_length = 256 * _length + (ch & 0xff);
-	
-	if (++_lengthIndex == 2 && _length == 0 && _isLastChunk) {
-	  String value = "binary(" + _totalLength + ")";
-	  
-	  if (_next.isShift(value))
-	    return _next.shift(value);
-	  else {
-	    printObject(value);
-	    return _next;
-	  }
-	}
-	else
-	  return this;
-      }
-      else if (_length == 0) {
-	if (ch == 'b') {
-	  _isLastChunk = false;
-	  _lengthIndex = 0;
-	  return this;
-	}
-	else if (ch == 'B') {
-	  _isLastChunk = true;
-	  _lengthIndex = 0;
-	  return this;
-	}
-	else if (ch == 0x20) {
-	  String value = "binary(" + _totalLength + ")";
-	  
-	  if (_next.isShift(value))
-	    return _next.shift(value);
-	  else {
-	    printObject(value);
-	    return _next;
-	  }
-	}
-	else if (0x20 <=ch && ch < 0x30) {
-	  _isLastChunk = true;
-	  _lengthIndex = 2;
-	  _length = (ch & 0xff) - 0x20;
-	  return this;
-	}
-	else if (ch == 0x34 || ch == 0x35 || ch == 0x36 || ch == 0x37) {
-	  _isLastChunk = true;
-	  _lengthIndex = 1;
-	  _length = (ch - 0x34) * 256;
-	  return this;
-	}
-	else {
-	  println(String.valueOf((char) ch) + ": unexpected character");
-	  return _next;
-	}
-      }
-      
-      _length--;
-      _totalLength++;
-
-      if (_length == 0 && _isLastChunk) {
-	String value = "binary(" + _totalLength + ")";
-	
-	if (_next.isShift(value))
-	  return _next.shift(value);
-	else {
-	  printObject(value);
-	  
-	  return _next;
-	}
-      }
-      else
-	return this;
+    	if (_lengthIndex == 0) {
+    		_length = ch & 0xff;
+    		switch (ch) {
+    		case 0x20: case 0x21: case 0x22: case 0x23:
+    		case 0x24: case 0x25: case 0x26: case 0x27:
+    		case 0x28: case 0x29: case 0x2a: case 0x2b:
+    		case 0x2c: case 0x2d: case 0x2e: case 0x2f:
+    			_lengthIndex = 2;
+    			_isLastChunk = true;
+    			break;
+    		default:
+    			_lengthIndex = 1;
+    		}
+    		return this;
+    	}
+    	else if (_lengthIndex == 1) {
+    		_length = (_length << 8) + (ch & 0xff);
+    		_lengthIndex = 2;
+    		return this;
+    	}
+    	else {
+    		if (_isLastChunk && _length - 1 == 0) {
+    			String value = "binary(" + (_totalLength + 1) + ")";
+    			if (_next.isShift(value))
+    				return _next.shift(value);
+    			else {
+    				printObject(value);
+    				return _next;
+    			}
+    		}
+    		else if (_length == 0) {
+    			switch (ch) {
+    			case 'b':
+    			case 'A':
+    				_isLastChunk = false;
+    				_lengthIndex = 0;
+    				return this;
+    			case 'B':
+    				_isLastChunk = true;
+    				_lengthIndex = 0;
+    				return this;
+    			case 0x20: case 0x21: case 0x22: case 0x23:
+    			case 0x24: case 0x25: case 0x26: case 0x27:
+    			case 0x28: case 0x29: case 0x2a: case 0x2b:
+    			case 0x2c: case 0x2d: case 0x2e: case 0x2f:
+    				_isLastChunk = true;
+    				_lengthIndex = 2;
+    				_length = (ch & 0xff) - 0x20;
+    				return this;
+    			case 0x34: case 0x35: case 0x36: case 0x37:
+    				_isLastChunk = true;
+    				_lengthIndex = 1;
+    				_length = (ch - 0x34);
+    				return this;
+    			default:
+    				println(String.valueOf((char) ch) + ": unexpected character");
+    				return _next;
+    			}
+    		}
+    		else {
+    			_length--;
+    			_totalLength++;
+    			return this;
+    		}
+    	}
     }
   }
   
