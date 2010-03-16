@@ -403,6 +403,18 @@ public class Hessian2Input
 	} catch (Throwable e) {
 	}
       }
+      
+      StackTraceElement[] remoteTrace = _replyFault.getStackTrace();
+      StackTraceElement[] localTrace;
+      {
+        Exception e = new Exception();
+        e.fillInStackTrace();
+        localTrace = e.getStackTrace();
+      }
+      StackTraceElement[] combinedTrace = new StackTraceElement[remoteTrace.length + localTrace.length];
+      System.arraycopy(remoteTrace, 0, combinedTrace, 0, remoteTrace.length);
+      System.arraycopy(localTrace, 0, combinedTrace, remoteTrace.length, localTrace.length);
+      _replyFault.setStackTrace(combinedTrace);
 	
       return _replyFault;
     }
